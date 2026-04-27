@@ -4,9 +4,20 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 
-const PORT = 3001;
-const CLIENT_ORIGIN = 'http://localhost:5173';
-const MONGO_URI = 'mongodb://127.0.0.1:27017/crdt_editor';
+// Render (and most PaaS) inject PORT dynamically, so we must read from env
+// and fall back to 3001 only for local dev.
+const PORT = process.env.PORT || 3001;
+
+// Comma-separated list so we can allow both the local Vite dev server and a
+// deployed Vercel URL at the same time, e.g.
+//   CLIENT_ORIGIN="http://localhost:5173,https://syncspace.vercel.app"
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean);
+
+// In production this points at MongoDB Atlas (or any managed Mongo); locally
+// it falls back to the dev instance.
+const MONGO_URI =
+  process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/crdt_editor';
 const GLOBAL_DOC_ID = 'global';
 
 const characterSchema = new mongoose.Schema(
@@ -36,7 +47,7 @@ mongoose
   );
 
 const app = express();
-app.use(cors({ origin: CLIENT_ORIGIN }));
+app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(express.json({ limit: '20mb' }));
 
 app.get('/', (_req, res) => {
@@ -88,7 +99,7 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_ORIGIN,
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
   },
 });
@@ -112,6 +123,6 @@ io.on('connection', (socket) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`CRDT relay listening on http://localhost:${PORT}`);
-  console.log(`Accepting CORS from ${CLIENT_ORIGIN}`);
+  console.log(`CRDT relay listening on port ${PORT}`);
+  console.log(`Accepting CORS from: ${ALLOWED_ORIGINS.join(', ')}`);
 });

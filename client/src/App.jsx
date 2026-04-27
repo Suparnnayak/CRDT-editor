@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 
 const ENGINE_SCRIPT_URL = '/crdt_engine.js';
-const SERVER_URL = 'http://localhost:3001';
+// Vite inlines `import.meta.env.VITE_*` at build time, so we point to the
+// deployed Render backend in production and fall back to localhost in dev.
+// Set VITE_BACKEND_URL on Vercel (e.g. https://crdt-relay.onrender.com).
+const SERVER_URL =
+  import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 // Embind binds CRDT_Character as a value_object, so the JS-side object is a
 // plain object — *but* its `position` field is a live VectorInt handle that
