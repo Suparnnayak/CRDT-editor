@@ -1,0 +1,22 @@
+# Root / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Node
+node_modules/
+npm-debug.log
+.env
+
+# Client (React)
+client/dist/
+client/dist-ssr/
+
+# Server
+server/node_modules/
+
+# C++ / Emscripten (Ignore caches, but KEEP the source and compiled .wasm/.js)
+*.o
+*.a
+*.out
+.emscripten_cache/
