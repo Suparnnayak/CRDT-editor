@@ -8,11 +8,24 @@ const { Server } = require('socket.io');
 // and fall back to 3001 only for local dev.
 const PORT = process.env.PORT || 3001;
 
-// Comma-separated list so we can allow both the local Vite dev server and a
-// deployed Vercel URL at the same time, e.g.
-//   CLIENT_ORIGIN="http://localhost:5173,https://syncspace.vercel.app"
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean);
+// Comma-separated list so we can allow the local Vite dev server and the
+// deployed Vercel URL at the same time. Override via CLIENT_ORIGIN on Render
+// when the production URL changes.
+const CLIENT_ORIGIN =
+  process.env.CLIENT_ORIGIN ||
+  'http://localhost:5173,https://crdteditor.vercel.app';
+const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+// Shared CORS options reused by both Express middleware and Socket.io,
+// so the HTTP API and the WebSocket handshake never disagree about which
+// origins are allowed.
+const corsOptions = {
+  origin: ALLOWED_ORIGINS,
+  methods: ['GET', 'POST'],
+  credentials: true,
+};
 
 // In production this points at MongoDB Atlas (or any managed Mongo); locally
 // it falls back to the dev instance.
@@ -47,7 +60,7 @@ mongoose
   );
 
 const app = express();
-app.use(cors({ origin: ALLOWED_ORIGINS }));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '20mb' }));
 
 app.get('/', (_req, res) => {
@@ -98,10 +111,7 @@ app.post('/api/document/save', async (req, res) => {
 const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
-  cors: {
-    origin: ALLOWED_ORIGINS,
-    methods: ['GET', 'POST'],
-  },
+  cors: corsOptions,
 });
 
 io.on('connection', (socket) => {
